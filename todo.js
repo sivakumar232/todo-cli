@@ -3,7 +3,6 @@ const fs = require('fs');
 const program = new Command();
 
 const FILE_PATH = 'DATA_FILE.JSON';
-const LOG_FILE = 'data.txt';
 
 function loadTasks() {
     if (!fs.existsSync(FILE_PATH)) return [];
@@ -18,9 +17,7 @@ function saveTasks(tasks) {
     fs.writeFileSync(FILE_PATH, JSON.stringify(tasks, null, 2), 'utf-8');
 }
 
-function logToTextFile(content) {
-    fs.appendFileSync(LOG_FILE, content + "\n", 'utf-8');
-}
+
 
 function savedata(task, time) {
     const tasks = loadTasks();
@@ -31,7 +28,6 @@ function savedata(task, time) {
     };
     tasks.push(newTask);
     saveTasks(tasks);
-    logToTextFile(`Task: ${task} | Deadline: ${time}`);
     console.log(`Task added successfully:\n  → ${task} (by ${time})`);
 }
 
@@ -65,7 +61,6 @@ function removeTaskById(id) {
     console.log(`Task removed successfully: ${removedTask.task}`);
 }
 
-// CLI Setup
 program
     .name('todolist')
     .description(`
