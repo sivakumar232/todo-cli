@@ -1,68 +1,110 @@
 const { Command } = require('commander');
-const { timeStamp } = require('console');
+const fs = require('fs');
 const program = new Command();
-const fs = require("fs")
-function savedata(taskk, time) {
-    const filePath = 'DATA_FILE.JSON';
 
-    let tasks = [];
-    if (fs.existsSync(filePath)) {
-        const fileData = fs.readFileSync(filePath, 'utf-8');
-        try {
-            tasks = JSON.parse(fileData); // Convert JSON string to array
-        } catch (err) {
-            tasks = []; // If file is empty or broken
-        }
+const FILE_PATH = 'DATA_FILE.JSON';
+const LOG_FILE = 'data.txt';
+
+function loadTasks() {
+    if (!fs.existsSync(FILE_PATH)) return [];
+    try {
+        return JSON.parse(fs.readFileSync(FILE_PATH, 'utf-8'));
+    } catch {
+        return [];
+    }
+}
+
+function saveTasks(tasks) {
+    fs.writeFileSync(FILE_PATH, JSON.stringify(tasks, null, 2), 'utf-8');
+}
+
+function logToTextFile(content) {
+    fs.appendFileSync(LOG_FILE, content + "\n", 'utf-8');
+}
+
+function savedata(task, time) {
+    const tasks = loadTasks();
+    const newTask = {
+        id: Date.now(),
+        task,
+        time
+    };
+    tasks.push(newTask);
+    saveTasks(tasks);
+    logToTextFile(`Task: ${task} | Deadline: ${time}`);
+    console.log(`Task added successfully:\n  → ${task} (by ${time})`);
+}
+
+function showtasks() {
+    const tasks = loadTasks();
+    if (tasks.length === 0) {
+        console.log("No tasks available.");
+        return;
     }
 
-    const newtask = [{
-        id: Date.now(),
-        task: taskk,
-        time: time
-    }]
-    tasks.push(newtask);
-    const content = `Task: ${taskk} ${time}\n`;
-    fs.writeFile("DATA_FILE.JSON", JSON.stringify(tasks, null, 2), (err) => {
-        if (err) throw err;
-        console.log("Task added succesfully!!")
-    })
-    fs.appendFile("data.txt", content, "utf-8", (err) => {
-        if (err) throw err;
-        else {
-
-        }
-    })
-}
-showtasks = () => {
-    fs.readFile("data.txt", "utf-8", (err, data) => {
-        if (err) throw err;
-        else {
-            console.log(data);
-        }
+    console.log(" Your Tasks:");
+    console.log("------------------------------------------");
+    tasks.forEach((t, index) => {
+        console.log(`${index + 1}. [ID: ${t.id}] Task: ${t.task} | Deadline: ${t.time}`);
     });
+    console.log("------------------------------------------");
 }
 
+function removeTaskById(id) {
+    let tasks = loadTasks();
+    const taskIndex = tasks.findIndex(t => t.id === id);
+
+    if (taskIndex === -1) {
+        console.log(` Task with ID ${id} not found.`);
+        return;
+    }
+
+    const removedTask = tasks.splice(taskIndex, 1)[0];
+    saveTasks(tasks);
+    logToTextFile(`Removed Task: ${removedTask.task} (ID: ${id})`);
+    console.log(`Task removed successfully: ${removedTask.task}`);
+}
+
+// CLI Setup
 program
     .name('todolist')
-    .description('*******************************************\nCommands\nadd : To add new list\nremove : To delete the list\nls :To view the tasks\n*******************************************\n')
-    .version('0.8.0')
+    .description(`
+*******************************************
+  TODOLIST CLI
+Commands:
+  add <task> <time>    → Add a new task
+  remove <id>          → Delete a task by ID
+  ls                   → Show all tasks
+*******************************************`)
+    .version('1.0.0');
 
-program.command('add')
-    .description('To add new todo in the list')
-    .argument('<string>', "add task")
-    .argument('<time>', "deadline")
+program
+    .command('add')
+    .description('Add a new todo to the list')
+    .argument('<task>', 'Task description')
+    .argument('<time>', 'Deadline for the task')
     .action((task, time) => {
         savedata(task, time);
-    })
-program.command('remove')
-    .description('To remove the todo from the list')
-    .action(() => {
+    });
 
-    })
-program.command('ls')
-    .description('To remove the todo from the list')
+program
+    .command('remove')
+    .description('Remove a task by ID')
+    .argument('<id>', 'Task ID to remove')
+    .action((id) => {
+        const numericId = parseInt(id);
+        if (isNaN(numericId)) {
+            console.log("Please provide a valid numeric ID.");
+        } else {
+            removeTaskById(numericId);
+        }
+    });
+
+program
+    .command('ls')
+    .description('Show all tasks')
     .action(() => {
         showtasks();
-    })
+    });
 
 program.parse();
